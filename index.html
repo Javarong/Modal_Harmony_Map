@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0f11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mapa Modal">
+<title>Mapa Modal · Cartografía Armónica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:         #0f0f11;
+  --bg2:        #17171a;
+  --bg3:        #1e1e23;
+  --border:     rgba(255,255,255,0.08);
+  --border2:    rgba(255,255,255,0.14);
+  --text:       #e8e8ec;
+  --text2:      #9898a8;
+  --text3:      #5a5a6a;
+  --accent:     #7c6af7;
+  --accent-bg:  rgba(124,106,247,0.12);
+  --accent-brd: rgba(124,106,247,0.35);
+  --warn:       #c97d2e;
+  --warn-bg:    rgba(201,125,46,0.10);
+  --warn-brd:   rgba(201,125,46,0.30);
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+  --r:    8px;
+  --r2:   12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+.header {
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 0.5px solid var(--border);
+  display: flex; align-items: baseline; gap: 12px;
+  position: sticky; top: 0;
+  background: rgba(15,15,17,0.92);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  z-index: 10;
+}
+.header-title { font-family: var(--mono); font-size: 15px; font-weight: 500; letter-spacing: 0.02em; color: var(--text); }
+.header-sub   { font-family: var(--mono); font-size: 11px; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.controls {
+  padding: 1rem 1.5rem; display: flex; flex-wrap: wrap; gap: 1.25rem;
+  border-bottom: 0.5px solid var(--border); background: var(--bg2);
+}
+.ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+.ctrl-label { font-family: var(--mono); font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+
+select {
+  font-family: var(--mono); font-size: 14px; font-weight: 500;
+  color: var(--text); background: var(--bg3);
+  border: 0.5px solid var(--border2); border-radius: var(--r);
+  padding: 7px 32px 7px 12px; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a5a6a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  min-width: 110px; cursor: pointer;
+}
+select:focus { outline: none; border-color: var(--accent); }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.btn-group { display: flex; flex-direction: column; gap: 4px; }
+button {
+  font-family: var(--mono); font-size: 11px; font-weight: 400;
+  padding: 5px 11px; border-radius: var(--r);
+  border: 0.5px solid var(--border2); background: var(--bg3);
+  color: var(--text2); cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em;
+}
+button:hover { color: var(--text); background: #252530; }
+button.active { background: var(--accent-bg); color: #b0a6ff; border-color: var(--accent-brd); }
+.sub-btns { display: none; flex-wrap: wrap; gap: 4px; padding-top: 2px; }
+.sub-btns.open { display: flex; }
+.sub-btns button { font-size: 10px; padding: 3px 8px; }
+.sub-btns button.active-sub { background: rgba(124,106,247,0.18); color: #c5bfff; border-color: var(--accent-brd); }
+
+.legend {
+  display: flex; align-items: center; gap: 7px;
+  padding: 0.6rem 1.5rem; border-bottom: 0.5px solid var(--border); background: var(--bg);
+}
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--warn-bg); border: 0.5px solid var(--warn-brd); flex-shrink: 0; }
+.legend-text { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.03em; }
+
+.table-wrap { overflow-x: auto; padding: 1rem 1.5rem 2rem; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; min-width: 600px; width: 100%; }
+thead th { font-family: var(--mono); font-size: 10px; color: var(--text3); text-align: center; padding: 4px 3px 8px; letter-spacing: 0.06em; font-weight: 400; }
+.row-label { font-family: var(--mono); font-size: 11px; color: var(--text2); font-weight: 400; padding-right: 10px; white-space: nowrap; vertical-align: middle; text-align: right; min-width: 100px; letter-spacing: 0.01em; }
+.degree-cell { padding: 3px; text-align: center; vertical-align: middle; min-width: 76px; }
+.cell-inner {
+  border: 0.5px solid var(--border); border-radius: var(--r);
+  padding: 7px 4px; background: var(--bg2);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 3px; min-height: 76px; justify-content: center; transition: border-color 0.15s;
+}
+.cell-inner:hover { border-color: var(--border2); }
+.cell-inner.altered { border-color: var(--warn-brd); background: var(--warn-bg); }
+.cell-inner.scale-cell { background: var(--bg3); }
+.cell-inner.scale-cell.altered { background: var(--warn-bg); }
+
+.deg   { font-family: var(--mono); font-size: 9px; color: var(--text3); letter-spacing: 0.04em; }
+.deg.altered { color: var(--warn); }
+.note  { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text); line-height: 1; letter-spacing: -0.01em; }
+.chord { font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.01em; }
+.chord.altered { color: var(--warn); }
+
+.sep-row td { padding: 12px 0 5px; border: none; }
+.sep-label { font-family: var(--mono); font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.12em; display: block; padding-bottom: 5px; border-bottom: 0.5px solid var(--border); }
+
+.footer { padding: 1rem 1.5rem; border-top: 0.5px solid var(--border); font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 0.04em; }
+
+@media (max-width: 600px) {
+  .header, .controls { padding: 1rem; }
+  .table-wrap { padding: 0.75rem 0.5rem 2rem; }
+  .degree-cell { min-width: 64px; }
+  .note { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <span class="header-title">Mapa Modal</span>
+  <span class="header-sub">Cartografía armónica</span>
+</header>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Nota raíz</span>
+    <select id="rootSelect">
+      <option value="C">C</option>
+      <option value="C#">C# / Db</option>
+      <option value="D">D</option>
+      <option value="Eb">Eb / D#</option>
+      <option value="E">E</option>
+      <option value="F">F</option>
+      <option value="F#">F# / Gb</option>
+      <option value="G">G</option>
+      <option value="Ab">Ab / G#</option>
+      <option value="A">A</option>
+      <option value="Bb">Bb / A#</option>
+      <option value="B">B</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Complejidad de acorde</span>
+    <div class="btn-row">
+      <div class="btn-group">
+        <button class="active" data-chord="triad">Tríada</button>
+      </div>
+      <div class="btn-group">
+        <button data-chord="tetrad">Tétrada</button>
+        <div class="sub-btns" id="tetradSub">
+          <button class="active-sub" data-sub="7th">7ma</button>
+          <button data-sub="6th">6ta</button>
+          <button data-sub="add9">Add9</button>
+          <button data-sub="maj7">Maj7</button>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button data-chord="pentad">Quintíada</button>
+        <div class="sub-btns" id="pentadSub">
+          <button class="active-sub" data-sub="9th">9na</button>
+          <button data-sub="add11">Add11</button>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button data-chord="hexad">Sextíada</button>
+        <div class="sub-btns" id="hexadSub">
+          <button class="active-sub" data-sub="11th">11na</button>
+          <button data-sub="13th">13na</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-dot"></div>
+  <span class="legend-text">Grado alterado — nota que se desvía de la escala mayor de la misma raíz</span>
+</div>
+
+<div class="table-wrap">
+  <div id="mapContainer"></div>
+</div>
+
+<footer class="footer">Mapa Modal · todos los modos y escalas desde cualquier raíz</footer>
+
+<script>
+// ── Enharmonic spelling engine ──────────────────────────────────────────────
+// Letter names in order
+const LETTERS = ['C','D','E','F','G','A','B'];
+
+// Semitone value of each natural note
+const NATURAL_SEMI = {C:0, D:2, E:4, F:5, G:7, A:9, B:11};
+
+// Whether a root prefers flats (true) or sharps (false)
+const ROOT_PREFERS_FLAT = {
+  'C':false,'C#':false,'D':false,'Eb':true,'E':false,
+  'F':true,'F#':false,'G':false,'Ab':true,'A':false,'Bb':true,'B':false
+};
+
+// Parse a root string into {letter, alter} where alter: -1=flat, 0=natural, 1=sharp
+function parseNote(n) {
+  const letter = n[0];
+  const acc = n.slice(1);
+  const alter = acc === '#' ? 1 : acc === 'b' ? -1 : 0;
+  return { letter, alter };
+}
+
+// Semitone of a parsed note (0-11)
+function noteSemi(letter, alter) {
+  return ((NATURAL_SEMI[letter] + alter) + 12) % 12;
+}
+
+// Given the root and a scale formula (array of semitone intervals from root),
+// returns an array of correctly-spelled note names.
+function spellScale(rootStr, formula) {
+  const root = parseNote(rootStr);
+  const rootLetterIdx = LETTERS.indexOf(root.letter);
+  const rootSemi = noteSemi(root.letter, root.alter);
+  const useFlatBias = ROOT_PREFERS_FLAT[rootStr] !== undefined
+    ? ROOT_PREFERS_FLAT[rootStr]
+    : rootStr.includes('b');
+
+  return formula.map((interval, degreeIdx) => {
+    const targetSemi = (rootSemi + interval) % 12;
+    // Expected letter for this degree (each degree uses the next letter)
+    const expectedLetterIdx = (rootLetterIdx + degreeIdx) % 7;
+    const expectedLetter = LETTERS[expectedLetterIdx];
+    const naturalSemiOfExpected = NATURAL_SEMI[expectedLetter];
+    // How many semitones to adjust
+    let alter = (targetSemi - naturalSemiOfExpected + 12) % 12;
+    // Normalize: prefer -1 (flat) over +11, prefer +1 (sharp) over -11
+    if (alter === 11) alter = -1;
+    if (alter === 10) alter = -2; // double flat, rare
+    if (alter === 2)  alter = 2;  // double sharp, rare
+    const accidental = alter === 0 ? '' : alter === 1 ? '#' : alter === -1 ? 'b' : alter === 2 ? '##' : 'bb';
+    return expectedLetter + accidental;
+  });
+}
+
+// ── Scale & mode definitions ─────────────────────────────────────────────────
+const SCALES = [
+  {name:'Mayor',          f:[0,2,4,5,7,9,11], d:['I','II','III','IV','V','VI','VII'],        a:[],      m:0},
+  {name:'Menor natural',  f:[0,2,3,5,7,8,10], d:['I','II','♭III','IV','V','♭VI','♭VII'],     a:[2,5,6], m:5},
+  {name:'Menor armónica', f:[0,2,3,5,7,8,11], d:['I','II','♭III','IV','V','♭VI','VII'],      a:[2,5],   m:5},
+  {name:'Menor melódica', f:[0,2,3,5,7,9,11], d:['I','II','♭III','IV','V','VI','VII'],       a:[2],     m:5},
+];
+const MODES = [
+  {name:'Jónico',    f:[0,2,4,5,7,9,11], d:['I','II','III','IV','V','VI','VII'],        a:[]},
+  {name:'Dórico',    f:[0,2,3,5,7,9,10], d:['I','II','♭III','IV','V','VI','♭VII'],      a:[2,6]},
+  {name:'Frigio',    f:[0,1,3,5,7,8,10], d:['I','♭II','♭III','IV','V','♭VI','♭VII'],    a:[1,2,5,6]},
+  {name:'Lidio',     f:[0,2,4,6,7,9,11], d:['I','II','III','♯IV','V','VI','VII'],       a:[3]},
+  {name:'Mixolidio', f:[0,2,4,5,7,9,10], d:['I','II','III','IV','V','VI','♭VII'],       a:[6]},
+  {name:'Eolio',     f:[0,2,3,5,7,8,10], d:['I','II','♭III','IV','V','♭VI','♭VII'],     a:[2,5,6]},
+  {name:'Locrio',    f:[0,1,3,5,6,8,10], d:['I','♭II','♭III','IV','♭V','♭VI','♭VII'],   a:[1,2,4,5,6]},
+];
+
+// ── Chord quality tables ─────────────────────────────────────────────────────
+const Q = {
+  triad: ['','m','m','','','m','dim'],
+  '7th': ['maj7','m7','m7','maj7','7','m7','m7♭5'],
+  '6th': ['6','m6','m6','6','6','m6','dim'],
+  add9:  ['add9','madd9','madd9','add9','add9','madd9','dimadd9'],
+  maj7:  ['maj7','m(maj7)','m(maj7)','maj7','(maj7)','m(maj7)','dim(maj7)'],
+  '9th': ['maj9','m9','m9','maj9','9','m9','m7♭9♭5'],
+  add11: ['add11','madd11','madd11','add11','add11','madd11','dimadd11'],
+  '11th':['maj11','m11','m11','maj11','11','m11','m11♭5'],
+  '13th':['maj13','m13','m13','maj13','13','m13','m13♭5'],
+};
+
+let st = {root:'C', sub:'triad', tetSub:'7th', penSub:'9th', hexSub:'11th'};
+
+function getQ(mi, di, sub) { return (Q[sub] || Q.triad)[(di + mi) % 7]; }
+
+function buildRow(name, formula, degs, alt, mi, sub, isScale) {
+  const notes = spellScale(st.root, formula);
+  let h = `<tr><td class="row-label">${name}</td>`;
+  notes.forEach((n, di) => {
+    const isA = alt.includes(di);
+    const q = getQ(mi, di, sub);
+    const cls = 'cell-inner' + (isScale ? ' scale-cell' : '') + (isA ? ' altered' : '');
+    h += `<td class="degree-cell"><div class="${cls}">
+      <span class="deg${isA?' altered':''}">${degs[di]}</span>
+      <span class="note">${n}</span>
+      <span class="chord${isA?' altered':''}">${n+q}</span>
+    </div></td>`;
+  });
+  return h + '</tr>';
+}
+
+function render() {
+  const sub = st.sub;
+  let h = '<table><thead><tr><th></th>';
+  ['I','II','III','IV','V','VI','VII'].forEach(d => h += `<th>${d}</th>`);
+  h += '</tr></thead><tbody>';
+  h += `<tr class="sep-row"><td colspan="8"><span class="sep-label">Escalas</span></td></tr>`;
+  SCALES.forEach(s => h += buildRow(s.name, s.f, s.d, s.a, s.m, sub, true));
+  h += `<tr class="sep-row"><td colspan="8"><span class="sep-label">Modos griegos</span></td></tr>`;
+  MODES.forEach((m, i) => h += buildRow(m.name, m.f, m.d, m.a, i, sub, false));
+  h += '</tbody></table>';
+  document.getElementById('mapContainer').innerHTML = h;
+}
+
+document.getElementById('rootSelect').addEventListener('change', e => { st.root = e.target.value; render(); });
+
+document.querySelectorAll('button[data-chord]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('button[data-chord]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.sub-btns').forEach(s => s.classList.remove('open'));
+    const c = btn.dataset.chord;
+    if (c==='triad') st.sub='triad';
+    else if (c==='tetrad')  { document.getElementById('tetradSub').classList.add('open'); st.sub=st.tetSub; }
+    else if (c==='pentad')  { document.getElementById('pentadSub').classList.add('open'); st.sub=st.penSub; }
+    else if (c==='hexad')   { document.getElementById('hexadSub').classList.add('open');  st.sub=st.hexSub; }
+    render();
+  });
+});
+
+[['tetradSub','tetSub'],['pentadSub','penSub'],['hexadSub','hexSub']].forEach(([id,key]) => {
+  document.querySelectorAll(`#${id} button[data-sub]`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`#${id} button`).forEach(b => b.classList.remove('active-sub'));
+      btn.classList.add('active-sub');
+      st[key] = btn.dataset.sub; st.sub = btn.dataset.sub;
+      render();
+    });
+  });
+});
+
+render();
+</script>
+</body>
+</html>
